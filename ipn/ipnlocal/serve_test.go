@@ -721,3 +721,40 @@ func Test_isGRPCContentType(t *testing.T) {
 		}
 	}
 }
+
+func TestStripMountPointFromError(t *testing.T) {
+	tests := []struct {
+		name       string
+		err        error
+		mountPoint string
+		want       string
+	}{
+		{
+			name:       "stripped",
+			err:        errors.New("open /mount/point/foo.txt: operation not permitted"),
+			mountPoint: "/mount/point",
+			want:       "open /foo.txt: operation not permitted",
+		},
+		{
+			name:       "not-present",
+			err:        errors.New("general error occurred"),
+			mountPoint: "/mount/point",
+			want:       "general error occurred",
+		},
+		{
+			name:       "empty-mount-point",
+			err:        errors.New("error at /mount/point: something went wrong"),
+			mountPoint: "",
+			want:       "error at /mount/point: something went wrong",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := stripMountPointFromError(tt.err, tt.mountPoint)
+			if got != tt.want {
+				t.Errorf("stripMountPointFromError() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

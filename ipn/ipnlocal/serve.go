@@ -743,6 +743,13 @@ func (b *LocalBackend) serveWebHandler(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "empty handler", 500)
 }
 
+// stripMountPointFromError removes the mount point from the error message
+// to avoid exposing the local filesystem path.
+func stripMountPointFromError(err error, mountPoint string) string {
+	errMsg := err.Error()
+	return strings.Replace(errMsg, mountPoint, "", -1)
+}
+
 func (b *LocalBackend) serveFileOrDirectory(w http.ResponseWriter, r *http.Request, fileOrDir, mountPoint string) {
 	fi, err := os.Stat(fileOrDir)
 	if err != nil {
@@ -750,7 +757,8 @@ func (b *LocalBackend) serveFileOrDirectory(w http.ResponseWriter, r *http.Reque
 			http.NotFound(w, r)
 			return
 		}
-		http.Error(w, err.Error(), 500)
+		sanitizedErr := stripMountPointFromError(err, mountPoint)
+		http.Error(w, sanitizedErr, 500)
 		return
 	}
 	if fi.Mode().IsRegular() {
@@ -760,7 +768,8 @@ func (b *LocalBackend) serveFileOrDirectory(w http.ResponseWriter, r *http.Reque
 		}
 		f, err := os.Open(fileOrDir)
 		if err != nil {
-			http.Error(w, err.Error(), 500)
+			sanitizedErr := stripMountPointFromError(err, mountPoint)
+			http.Error(w, sanitizedErr, 500)
 			return
 		}
 		defer f.Close()
